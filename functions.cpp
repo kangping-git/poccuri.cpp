@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tuple>
 #include <variant>
 #include <type_traits>
@@ -11,7 +13,7 @@ template <typename T>
 struct is_vector : false_type
 {
 };
-template <int N>
+template <size_t N>
 struct is_vector<VectorVariable<N>> : true_type
 {
 };
@@ -21,9 +23,6 @@ inline constexpr bool is_vector_v = is_vector<T>::value;
 
 template <typename T>
 concept AllowedType = is_same_v<T, floatVariable> || is_vector_v<T>;
-
-template <typename V>
-using value_type = decltype(V::value);
 
 template <AllowedType T>
 class add
@@ -136,17 +135,16 @@ private:
     VectorVariable<N> val;
 
 public:
-    Scalar(VectorVariable<N> &a, floatVariable &b) // floatVariable<N>から修正
+    Scalar(VectorVariable<N> &a, floatVariable &b)
     {
         a.freeze();
         b.freeze();
         A = a;
         B = b;
 
-        // ベクトルのスカラ倍: val[i] = A[i] * B
         for (int i = 0; i < N; ++i)
         {
-            val[i] = A[i] * B;
+            val[i] = A[i] * B.get();
         }
     }
 
@@ -155,7 +153,7 @@ public:
         return val;
     }
 
-    tuple<floatVariable, VectorVariable<N>> backward(VectorVariable<N> v)
+    tuple<VectorVariable<N>, floatVariable> backward(VectorVariable<N> v)
     {
         float grad_B_val = 0;
         for (int i = 0; i < N; ++i)
@@ -167,12 +165,46 @@ public:
         VectorVariable<N> grad_A;
         for (int i = 0; i < N; ++i)
         {
-            grad_A[i] = B * v[i];
+            grad_A[i] = B.get() * v[i];
         }
 
         grad_A.freeze();
         grad_B.freeze();
 
-        return {grad_B, grad_A};
+        return {grad_A, grad_B};
+    }
+};
+
+template <size_t N, size_t A, size_t B>
+    requires(A <= B && B <= N)
+class Slice
+{
+private:
+    VectorVariable<N> value;
+    VectorVariable<B - A> output;
+
+public:
+    Slice(VectorVariable<N> &from)
+    {
+        from.freeze();
+        value = from;
+        for (int i = A; i < B; ++i)
+        {
+            output[i - A] = from[i];
+        }
+    }
+    VectorVariable<B - A> get()
+    {
+        return output;
+    }
+    tuple<VectorVariable<N>> backward(VectorVariable<B - A> v)
+    {
+        VectorVariable<N> b(0.0);
+        for (int i = A; i < B; ++i)
+        {
+            b[i] = v[i - A];
+        }
+        b.freeze();
+        return b;
     }
 };
