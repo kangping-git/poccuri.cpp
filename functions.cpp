@@ -208,3 +208,28 @@ public:
         return b;
     }
 };
+
+template <size_t N, size_t idx>
+    requires(idx < N)
+class GetFromIdx
+{
+private:
+    floatVariable output;
+
+public:
+    GetFromIdx(VectorVariable<N> from)
+    {
+        output = floatVariable(from[idx]);
+    }
+    floatVariable get()
+    {
+        return output;
+    }
+    tuple<VectorVariable<N>> backward(floatVariable v)
+    {
+        VectorVariable<N> res(0.0);
+        res[idx] = static_cast<double>(v.get());
+        res.freeze();
+        return {res};
+    }
+};
