@@ -220,6 +220,7 @@ public:
     GetFromIdx(VectorVariable<N> from)
     {
         output = floatVariable(from[idx]);
+        from.freeze();
     }
     floatVariable get()
     {
@@ -232,4 +233,34 @@ public:
         res.freeze();
         return {res};
     }
+};
+
+template <size_t N, size_t idx>
+    requires(idx < N)
+class SetVector
+{
+private:
+    VectorVariable<N> S;
+
+public:
+    SetVector(VectorVariable<N> &A, floatVariable &B)
+    {
+        S = A;
+        A.freeze();
+        B.freeze();
+        S[idx] = B.get();
+    };
+    VectorVariable<N> get()
+    {
+        return S;
+    };
+    tuple<VectorVariable<N>, floatVariable> backward(VectorVariable<N> r)
+    {
+        VectorVariable<N> res = r;
+        floatVariable res2 = r[idx];
+        res[idx] = 0.0;
+        res.freeze();
+        res2.freeze();
+        return {res, res2};
+    };
 };
