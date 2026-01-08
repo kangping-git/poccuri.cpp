@@ -1,1 +1,0 @@
-g++ -std=c++23 -O3 -o main.out main.cpp
