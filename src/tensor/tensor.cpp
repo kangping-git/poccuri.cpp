@@ -77,4 +77,12 @@ public:
         }
         return (*data)[p];
     };
+    T &operator[](convertible_to<size_t> auto idx)
+    {
+        return (*data)[idx];
+    }
+    const T &operator[](convertible_to<size_t> auto idx) const
+    {
+        return (*data)[idx];
+    }
 };
